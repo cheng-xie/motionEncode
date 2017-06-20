@@ -4,17 +4,24 @@ from torch.autograd import Variable
 import torch.nn as nn
 
 class AutoEncoder:
-    def __init__(self, encoder, decoder, data):
+    def __init__(self, encoder, decoder, data, use_cuda=True):
         self.enc = encoder
         self.dec = decoder
         self.data = data
+        self.use_cuda = use_cuda
 
         # Dimensions of samples
         self.sample_size = iter(data).next()[0].size()
         # Dimensions of encoding
         self.code_size = decoder.input_size()
 
+        # Use MSELoss for now
         self.criterion = nn.MSELoss()
+
+        if self.use_cuda:
+            self.enc = self.enc.cuda()
+            self.dec = self.dec.cuda()
+            self.criterion = self.criterion.cuda()
 
         self.enc_optim = optim.Adam(self.enc.parameters())
         self.dec_optim = optim.Adam(self.dec.parameters())
@@ -22,7 +29,7 @@ class AutoEncoder:
         self.data_iter = iter(data)
 
     def train(self, iters, batch_size):
-        ''' Trains the Auto Encoder for some number of steps
+        ''' Trains the Auto Encoder for some number of steps.
         '''
         for _ in range(iters):
             # Zero out the gradients
@@ -31,8 +38,14 @@ class AutoEncoder:
 
             # Sample data
             data_samples = Variable(self._sample_data(batch_size))
+            if self.use_cuda:
+                data_samples = data_samples.cuda()
+
             # Target is the data itself
             target = data_samples
+            if self.use_cuda:
+                target = target.cuda()
+
             # Encode the sample
             encoding = self.enc.forward(data_samples)
             # Decode the sample
@@ -41,9 +54,16 @@ class AutoEncoder:
             loss = self.criterion(recon, target)
             # Calculate some gradients
             loss.backward()
-            self.gen_optim.step()
+            # Run update step
+            self.enc_optim.step()
+            self.dec_optim.step()
 
             print('Loss', loss.data[0])
+
+    def reconstruct(self, samples):
+        if self.use_cuda:
+            samples = samples.cuda()
+        return self.dec.forward(self.enc.forward(samples))
 
     def _sample_data(self, num_samples):
         ''' Draws num_samples samples from the data
