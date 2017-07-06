@@ -31,6 +31,7 @@ class AutoEncoder:
     def train(self, iters, batch_size):
         ''' Trains the Auto Encoder for some number of steps.
         '''
+        tot_loss = 0
         for _ in range(iters):
             # Zero out the gradients
             self.enc.zero_grad()
@@ -58,7 +59,10 @@ class AutoEncoder:
             self.enc_optim.step()
             self.dec_optim.step()
 
-            print('Loss', loss.data[0])
+            tot_loss += loss.data[0]
+            # print('Loss', loss.data[0])
+        print('Loss', tot_loss/iters)
+
 
     def reconstruct(self, samples):
         if self.use_cuda:

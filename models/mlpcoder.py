@@ -6,8 +6,8 @@ import torch.nn.functional as F
 class MLPDecoder(nn.Module):
     def __init__(self, d_in, d_out):
         super(MLPDecoder, self).__init__()
-        H1 = 20
-        H2 = 20
+        H1 = 200
+        H2 = 50
         self._d_in = d_in
         self._d_out = d_out
 
@@ -32,15 +32,15 @@ class MLPDecoder(nn.Module):
 class MLPEncoder(nn.Module):
     def __init__(self, d_in, d_out):
         super(MLPEncoder, self).__init__()
-        H1 = 20
-        H2 = 20
+        H1 = 200
+        H2 = 50
         self.d_in = d_in
 
         # sample -> hidden
         self.l1 = nn.Linear(d_in, H1)
         self.l11 = nn.Linear(H1, H2)
         # hidden -> probability
-        self.l2 = nn.Linear(H1, d_out)
+        self.l2 = nn.Linear(H2, d_out)
 
     def forward(self, input):
         x = self.l1(input)
