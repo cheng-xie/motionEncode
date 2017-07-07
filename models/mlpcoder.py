@@ -3,11 +3,16 @@ from torch.autograd import Variable
 import torch.nn as nn
 import torch.nn.functional as F
 
+def selu(x):
+    alpha = 1.6732632423543772848170429916717
+    scale = 1.0507009873554804934193349852946
+    return scale * F.elu(x, alpha)
+
 class MLPDecoder(nn.Module):
     def __init__(self, d_in, d_out):
         super(MLPDecoder, self).__init__()
-        H1 = 200
-        H2 = 50
+        H1 = 10
+        H2 = 100
         self._d_in = d_in
         self._d_out = d_out
 
@@ -32,8 +37,8 @@ class MLPDecoder(nn.Module):
 class MLPEncoder(nn.Module):
     def __init__(self, d_in, d_out):
         super(MLPEncoder, self).__init__()
-        H1 = 200
-        H2 = 50
+        H1 = 100
+        H2 = 10
         self.d_in = d_in
 
         # sample -> hidden

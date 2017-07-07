@@ -63,11 +63,20 @@ class AutoEncoder:
             # print('Loss', loss.data[0])
         print('Loss', tot_loss/iters)
 
-
     def reconstruct(self, samples):
         if self.use_cuda:
             samples = samples.cuda()
         return self.dec.forward(self.enc.forward(samples))
+
+    def encode(self, samples):
+        if self.use_cuda:
+            samples = samples.cuda()
+        return self.enc.forward(samples)
+
+    def decode(self, codes):
+        if self.use_cuda:
+            codes = codes.cuda()
+        return self.dec.forward(codes)
 
     def _sample_data(self, num_samples):
         ''' Draws num_samples samples from the data
