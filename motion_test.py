@@ -1,58 +1,42 @@
 import json
 from json import encoder
 import os
-import strider
 
 import numpy as np
 
 import torch
 import torch.optim as optim
 from torch.autograd import Variable
-from models.mlpcoder import MLPEncoder, MLPDecoder
-from autoencoder import AutoEncoder
 from torch.utils.data import DataLoader
 
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 
+from autoencoder.models.mlpcoder import MLPEncoder, MLPDecoder
+from autoencoder.autoencoder import AutoEncoder
+import util
 
-def test_bimodal_motion(m_file_dir1, m_file_dir2, out_path):
+def test_bimodal_motion(mfile_dir1, mfile_dir2, out_path):
     # preprocessing
     # TODO: handle different target frame rates
     dataset = None
-    mdata = None
     window_size = 20
     stride = 5
-    for m_file_path in os.listdir(m_file_dir1):
-        with open(os.path.join(m_file_dir1, m_file_path)) as mfile:
-            mdata = json.load(mfile)
-            motion = np.array(mdata['Frames'], dtype=np.float32)
-            samples = strider.stride_windows(motion, window_size=window_size, stride=stride)
-            if dataset is None:
-                dataset = samples
-            else:
-                dataset = np.concatenate((dataset, samples))
 
+    # Load data
+    dataset = util.add_dir_motion_windows(mfile_dir1, window_size = window_size, stride = stride, dataset = dataset)
     if dataset is None:
         print('First dir did not contain proper data.')
+    dataset = util.add_dir_motion_windows(mfile_dir2, window_size = window_size, stride = stride, dataset = dataset)
 
-    for m_file_path in os.listdir(m_file_dir2):
-        with open(os.path.join(m_file_dir2, m_file_path)) as mfile:
-            mdata = json.load(mfile)
-            motion = np.array(mdata['Frames'], dtype=np.float32)
-            samples = strider.stride_windows(motion, window_size=window_size, stride=stride)
-            dataset = np.concatenate((dataset, samples))
-
-
-
-    print(dataset.shape)
     # Flatten features as we are just using a MLP
     dataset = dataset.reshape(dataset.shape[0],-1)
-    print(dataset.shape)
 
     num_iters = 250
+    num_sub_steps = 20
     code_size = 3
     sample_size = dataset.shape[1]
+    # Full batch
     batch_size = dataset.shape[0]
 
     # leave index 0 as a validation sample
@@ -64,7 +48,7 @@ def test_bimodal_motion(m_file_dir1, m_file_dir2, out_path):
 
     for ii in range(num_iters):
         print(str(ii) + '/' + str(num_iters) + ' ')
-        aut.train(20, batch_size)
+        aut.train(num_sub_steps, batch_size)
 
     # Try to reconstruct one of the samples
     recon = aut.reconstruct(Variable(torch.FloatTensor(dataset[0:1]))).data.cpu().numpy()
@@ -84,6 +68,7 @@ def test_bimodal_motion(m_file_dir1, m_file_dir2, out_path):
     plt.show()
 
     # print to file
+    mdata = {}
     mdata['Frames'] = recon.tolist()
     mdata['Loop'] = False
     with open(out_path, 'w') as outfile:
@@ -95,23 +80,13 @@ def test_overfit_motion(m_file_dir, out_path):
     # preprocessing
     # TODO: handle different target frame rates
     dataset = None
-    mdata = None
     window_size = 15
     stride = 3
-    for m_file_path in os.listdir(m_file_dir):
-        with open(os.path.join(m_file_dir, m_file_path)) as mfile:
-            mdata = json.load(mfile)
-            motion = np.array(mdata['Frames'], dtype=np.float32)
-            samples = strider.stride_windows(motion, window_size=window_size, stride=3)
-            if dataset is None:
-                dataset = samples
-            else:
-                dataset = np.concatenate((dataset, samples))
 
-    print(dataset.shape)
+    dataset = util.add_dir_motion_windows(mfile_dir2, window_size = window_size, stride = stride, dataset = dataset)
+
     # Flatten features as we are just using a MLP
     dataset = dataset.reshape(dataset.shape[0],-1)
-    print(dataset.shape)
 
     num_iters = 250
     code_size = 3
@@ -147,6 +122,7 @@ def test_overfit_motion(m_file_dir, out_path):
     plt.show()
 
     # print to file
+    mdata = {}
     mdata['Frames'] = recon.tolist()
     mdata['Loop'] = False
     with open(out_path, 'w') as outfile:

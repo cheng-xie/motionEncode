@@ -2,8 +2,8 @@ import numpy as np
 import torch
 import torch.optim as optim
 from torch.autograd import Variable
-from models.mlpcoder import MLPEncoder, MLPDecoder
-from autoencoder import AutoEncoder
+from autoencoder.models.mlpcoder import MLPEncoder, MLPDecoder
+from autoencoder.autoencoder import AutoEncoder
 from torch.utils.data import DataLoader
 
 import matplotlib.pyplot as plt
