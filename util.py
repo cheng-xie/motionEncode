@@ -4,6 +4,9 @@ import os
 
 import numpy as np
 
+
+# Strided Windows
+
 def stride_windows(arr, window_size, stride=1):
     """
         Creates strided window views over sequence data with desired window length and stride.
@@ -24,6 +27,8 @@ def gen_strided_windows(arr, window_size, stride=1):
         yield arr[t:t+window_size]
 
 
+# Parsing Files
+
 def parse_file_motion_windows(mfile, window_size, stride = 1):
     """
         Parses a motion file into windows.
@@ -31,6 +36,7 @@ def parse_file_motion_windows(mfile, window_size, stride = 1):
         Args:
             @mfile          A file object from which motion should be added.
             @window_size    Size of windows of motions to return.
+                            If None will return the whole clip.
             @stride         Stride between windows of motion to return.
 
         Returns:
@@ -38,7 +44,10 @@ def parse_file_motion_windows(mfile, window_size, stride = 1):
     """
     mdata = json.load(mfile)
     motion = np.array(mdata['Frames'], dtype=np.float32)
-    samples = stride_windows(motion, window_size=window_size, stride=stride)
+    if window_size is None:
+        samples = motion
+    else:
+        samples = stride_windows(motion, window_size=window_size, stride=stride)
     return samples
 
 def add_file_motion_windows(mfile, window_size, stride = 1, dataset = None):
@@ -81,3 +90,11 @@ def add_dir_motion_windows(mfile_dir, window_size, stride = 1, dataset = None):
             dataset = add_file_motion_windows(mfile, window_size, stride = stride, dataset = dataset)
     return dataset
 
+def file_list_from_dir_list(dirs):
+    """
+        Generates a list of file paths for the files contained in the list of directories.
+    """
+    file_paths = []
+    for diri in dirs:
+        file_paths += [os.path.join(diri, x) for x in os.listdir(diri)]
+    return file_paths
