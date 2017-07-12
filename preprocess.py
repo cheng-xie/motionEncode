@@ -117,3 +117,20 @@ class TerrainRLMotionPreprocessor:
 
         return clip
 
+    def output_motion(frames, out_path):
+        """
+            Responsible for writing a TerrainRL motion back to a file.
+            Args:
+                @frames     A 2D numpy array of dimensions (frames, features) in
+                            TerrainRL motion frames format.
+        """
+        # Construct the TerrainRLMotion json dictionary
+        mdata = {}
+        mdata['Frames'] = frames.tolist()
+        mdata['Loop'] = False
+        with open(out_path, 'w') as outfile:
+            # TODO: figure out how to format floats properly
+            # encoder.FLOAT_REPR = lambda f: ("%.2f" % f)
+            json.dump(mdata, outfile)
+
+

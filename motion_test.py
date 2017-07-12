@@ -17,21 +17,92 @@ from autoencoder.autoencoder import AutoEncoder
 import util
 from preprocess import TerrainRLMotionPreprocessor as Preprocessor
 
-'''
-class MultimodalMotion:
+class MultimodalMotionScenario:
     def __init__():
+        init_model(sample_dims, code_dims)
         pass
 
-    def save_param_dict():
+    def init_model(sample_dims, code_dims):
+        enc = MLPEncoder(sample_dims, code_dims)
+        dec = MLPDecoder(code_dims, sample_dims)
+        self.model = AutoEncoder(enc, dec, data_loader, use_cuda = True)
 
-    def load_param_dict()
+    def save_param_dict(path):
+        aut.save_state_dict(path)
 
-    def train():
+    def load_param_dict(path):
+        aut.load_state_dict(path)
+
+    def train(dataset, num_iters, num_sub_steps, batch_size=-1):
+        sample_dims = dataset.shape[1]
+        if batch_size == -1:
+            batch_size = dataset.shape[0]
+
+        data_loader = DataLoader(torch.FloatTensor(dataset), batch_size=batch_size, shuffle=True)
+
+        for ii in range(num_iters):
+            print(str(ii) + '/' + str(num_iters) + ' ')
+            aut.train(num_sub_steps, batch_size)
 
     def recon():
+        """
+            Reconstructs an input clip using our model.
+        """
+        # Try to reconstruct one of the samples
+        recon = aut.reconstruct(Variable(torch.FloatTensor(dataset[100:101]))).data.cpu().numpy()
+        recon = recon.reshape(recon.shape[0], window_size, -1)
+        # Remove unnecessary dimension
+        recon = recon.reshape(window_size, -1)
+
+        # postprocessing
+        if do_preprocess:
+            recon = preprocessor.convert_back(recon)
+
+        print(recon)
+        print(recon.shape)
 
     def visualize():
-'''
+        # Visualizations
+        if do_visualize and code_dims >= 3:
+            codes = aut.encode(Variable(torch.FloatTensor(dataset))).data.cpu().numpy()
+            fig = plt.figure()
+            ax = fig.add_subplot(111, projection='3d')
+            ax.scatter(codes[:,0],codes[:,1],codes[:,2],c=np.arange(codes.shape[0]))
+            plt.show()
+
+    def load_dataset():
+        raise NotImplementedError("Subclasses should implement this!")
+
+    def generate_dataset(mfile_dirs):
+        # Preprocessing
+        # TODO: handle different target frame rates
+        dataset = None
+        window_size = 30
+        stride = 5
+        do_preprocess = True
+        do_visualize = True
+
+        # Load data
+        if do_preprocess:
+            file_paths = util.file_list_from_dir_list(mfile_dirs)
+            preprocessor = Preprocessor(t_feature_idx=0, x_feature_idx=1, z_feature_idx=3, window_size=window_size, stride=stride)
+            dataset = preprocessor.generate_dataset(file_paths)
+        else:
+            for mfile_dir in mfile_dirs:
+                dataset = util.add_dir_motion_windows(mfile_dir, window_size = window_size, stride = stride, dataset = dataset)
+                if dataset is None:
+                    print('Dir did not contain proper data.')
+
+        # Flatten features as we are just using a MLP
+        dataset = dataset.reshape(dataset.shape[0],-1)
+
+
+def simple_test_multimodal_motion(mfile_dirs, out_path, save_weights_path, load_weights_path = None):
+    dataset = None
+    window_size = 30
+    stride = 5
+    do_preprocess = True
+    do_visualize = True
 
 def test_multimodal_motion(mfile_dirs, out_path, save_weights_path, load_weights_path = None):
     # Preprocessing
