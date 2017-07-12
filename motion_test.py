@@ -17,225 +17,123 @@ from autoencoder.autoencoder import AutoEncoder
 import util
 from preprocess import TerrainRLMotionPreprocessor as Preprocessor
 
-class MultimodalMotionScenario:
-    def __init__():
-        init_model(sample_dims, code_dims)
+class TerrainRLMotionEncodeScenario:
+    """
+        Wrapper for a TerrainRL motion encoder for supervised training.
+    """
+    def __init__(self, code_dims, sample_dims, preprocessor, use_cuda = True):
+        self._code_dims = code_dims
+        self._sample_dims = sample_dims
+        self._model = self.init_model(sample_dims, code_dims, use_cuda)
+        self.preprocessor = preprocessor
         pass
 
-    def init_model(sample_dims, code_dims):
+    def init_model(self, sample_dims, code_dims, use_cuda = True):
         enc = MLPEncoder(sample_dims, code_dims)
         dec = MLPDecoder(code_dims, sample_dims)
-        self.model = AutoEncoder(enc, dec, data_loader, use_cuda = True)
+        model = AutoEncoder(enc, dec, use_cuda)
+        return model
 
-    def save_param_dict(path):
-        aut.save_state_dict(path)
+    def save_model_param_dict(self, path):
+        self._model.save_state_dict(path)
 
-    def load_param_dict(path):
-        aut.load_state_dict(path)
+    def load_model_param_dict(self, path):
+        self._model.load_state_dict(path)
 
-    def train(dataset, num_iters, num_sub_steps, batch_size=-1):
-        sample_dims = dataset.shape[1]
+    def train(self, dataset, epochs, batch_size=-1, iters_per_log = 1):
+        """
+            Trains the encoding model on the supplied dataset.
+            Args:
+                @dataset:   A 2D numpy array of dimensions
+        """
+        assert dataset.shape[1] == self._sample_dims, \
+            "Dataset feature dims (%r) incompatible with model (%r)." \
+            % (dataset.shape[1], self._sample_dims)
+
         if batch_size == -1:
             batch_size = dataset.shape[0]
 
-        data_loader = DataLoader(torch.FloatTensor(dataset), batch_size=batch_size, shuffle=True)
+        self._model.train(dataset, epochs, batch_size, iters_per_log)
 
-        for ii in range(num_iters):
-            print(str(ii) + '/' + str(num_iters) + ' ')
-            aut.train(num_sub_steps, batch_size)
-
-    def recon():
+    def reconstruct(self, clip, window_size):
         """
             Reconstructs an input clip using our model.
         """
         # Try to reconstruct one of the samples
-        recon = aut.reconstruct(Variable(torch.FloatTensor(dataset[100:101]))).data.cpu().numpy()
+        recon = self._model.reconstruct(clip).data.cpu().numpy()
         recon = recon.reshape(recon.shape[0], window_size, -1)
-        # Remove unnecessary dimension
         recon = recon.reshape(window_size, -1)
 
-        # postprocessing
-        if do_preprocess:
-            recon = preprocessor.convert_back(recon)
+        recon = self.preprocessor.convert_back(recon)
 
-        print(recon)
-        print(recon.shape)
+        return recon
 
-    def visualize():
+    def visualize_encoding(self, dataset):
         # Visualizations
-        if do_visualize and code_dims >= 3:
-            codes = aut.encode(Variable(torch.FloatTensor(dataset))).data.cpu().numpy()
+        if self._code_dims >= 3:
+            codes = self._model.encode(Variable(torch.FloatTensor(dataset))).data.cpu().numpy()
             fig = plt.figure()
             ax = fig.add_subplot(111, projection='3d')
             ax.scatter(codes[:,0],codes[:,1],codes[:,2],c=np.arange(codes.shape[0]))
             plt.show()
 
-    def load_dataset():
-        raise NotImplementedError("Subclasses should implement this!")
-
-    def generate_dataset(mfile_dirs):
+    def generate_dataset(self, file_paths, window_size, stride):
         # Preprocessing
         # TODO: handle different target frame rates
         dataset = None
-        window_size = 30
-        stride = 5
-        do_preprocess = True
-        do_visualize = True
 
         # Load data
-        if do_preprocess:
-            file_paths = util.file_list_from_dir_list(mfile_dirs)
-            preprocessor = Preprocessor(t_feature_idx=0, x_feature_idx=1, z_feature_idx=3, window_size=window_size, stride=stride)
-            dataset = preprocessor.generate_dataset(file_paths)
-        else:
-            for mfile_dir in mfile_dirs:
-                dataset = util.add_dir_motion_windows(mfile_dir, window_size = window_size, stride = stride, dataset = dataset)
-                if dataset is None:
-                    print('Dir did not contain proper data.')
+        preprocessor = Preprocessor(t_feature_idx=0, x_feature_idx=1, z_feature_idx=3, window_size=window_size, stride=stride)
+        dataset = preprocessor.generate_dataset(file_paths)
 
         # Flatten features as we are just using a MLP
         dataset = dataset.reshape(dataset.shape[0],-1)
-
+        return dataset
 
 def simple_test_multimodal_motion(mfile_dirs, out_path, save_weights_path, load_weights_path = None):
-    dataset = None
+    # Params
     window_size = 30
     stride = 5
-    do_preprocess = True
     do_visualize = True
 
-def test_multimodal_motion(mfile_dirs, out_path, save_weights_path, load_weights_path = None):
-    # Preprocessing
-    # TODO: handle different target frame rates
-    dataset = None
-    window_size = 30
-    stride = 5
-    do_preprocess = True
-    do_visualize = True
+    use_cuda = True
+    epochs = 10000
+    batch_size = -1     # Full batches
+    iters_per_log = 10
 
-    # Load data
-    if do_preprocess:
-        file_paths = util.file_list_from_dir_list(mfile_dirs)
-        preprocessor = Preprocessor(t_feature_idx=0, x_feature_idx=1, z_feature_idx=3, window_size=window_size, stride=stride)
-        dataset = preprocessor.generate_dataset(file_paths)
-    else:
-        for mfile_dir in mfile_dirs:
-            dataset = util.add_dir_motion_windows(mfile_dir, window_size = window_size, stride = stride, dataset = dataset)
-            if dataset is None:
-                print('Dir did not contain proper data.')
+    code_dims = 3
 
-    # Flatten features as we are just using a MLP
+    # Generate Dataset
+    file_paths = util.file_list_from_dir_list(mfile_dirs)
+    preprocessor = Preprocessor(t_feature_idx=0, x_feature_idx=1, z_feature_idx=3, \
+                                window_size=window_size, stride=stride)
+    dataset = preprocessor.generate_dataset(file_paths)
     dataset = dataset.reshape(dataset.shape[0],-1)
 
+    # Create Scenario
+    sample_dims = dataset.shape[1]
+    scenario = TerrainRLMotionEncodeScenario(code_dims, sample_dims, preprocessor, use_cuda)
+
+    # Load Model
+    if load_weights_path is not None:
+        scenario.load_model_param_dict(load_weights_path)
 
     # Train
-    num_iters = 1550
-    num_sub_steps = 20
-    code_size = 3
-    sample_size = dataset.shape[1]
-    # Full batch
-    batch_size = dataset.shape[0]
-    # Leave index 0 as a validation sample
-    data_loader = DataLoader(torch.FloatTensor(dataset[1:]), batch_size=batch_size, shuffle=True)
-    # data_loader = DataLoader(torch.FloatTensor(dataset), batch_size=batch_size, shuffle=True)
+    scenario.train(dataset, epochs, batch_size, iters_per_log)
 
-    enc = MLPEncoder(sample_size, code_size)
-    dec = MLPDecoder(code_size, sample_size)
-    aut = AutoEncoder(enc, dec, data_loader, use_cuda = True)
+    # Save Model
+    if save_weights_path is not None:
+        scenario.save_model_param_dict(save_weights_path)
 
-    print(save_weights_path)
-    print(load_weights_path)
-    if load_weights_path is not None:
-        aut.load_state_dict(load_weights_path)
+    # Visualize
+    if do_visualize:
+        scenario.visualize_encoding(dataset)
 
-    for ii in range(num_iters):
-        print(str(ii) + '/' + str(num_iters) + ' ')
-        aut.train(num_sub_steps, batch_size)
-
-    # Save the model
-    aut.save_state_dict(save_weights_path)
-
-
-    # Visualizations
-    if do_visualize and code_size >= 3:
-        codes = aut.encode(Variable(torch.FloatTensor(dataset))).data.cpu().numpy()
-        fig = plt.figure()
-        ax = fig.add_subplot(111, projection='3d')
-        ax.scatter(codes[:,0],codes[:,1],codes[:,2],c=np.arange(codes.shape[0]))
-        plt.show()
-
-
-    # Try to reconstruct one of the samples
-    recon = aut.reconstruct(Variable(torch.FloatTensor(dataset[100:101]))).data.cpu().numpy()
-    recon = recon.reshape(recon.shape[0], window_size, -1)
-    # Remove unnecessary dimension
-    recon = recon.reshape(window_size, -1)
-
-    # postprocessing
-    if do_preprocess:
-        recon = preprocessor.convert_back(recon)
+    # Output Reconstruction
+    recon = scenario.reconstruct(dataset[100:101], window_size)
 
     print(recon)
     print(recon.shape)
 
-    # write to file
-    mdata = {}
-    mdata['Frames'] = recon.tolist()
-    mdata['Loop'] = False
-    with open(out_path, 'w') as outfile:
-        encoder.FLOAT_REPR = lambda f: ("%.2f" % f)
-        json.dump(mdata, outfile)
-
-def test_overfit_motion(m_file_dir, out_path):
-    # preprocessing
-    # TODO: handle different target frame rates
-    dataset = None
-    window_size = 15
-    stride = 3
-
-    dataset = util.add_dir_motion_windows(mfile_dir2, window_size = window_size, stride = stride, dataset = dataset)
-
-    # Flatten features as we are just using a MLP
-    dataset = dataset.reshape(dataset.shape[0],-1)
-
-    num_iters = 250
-    code_size = 3
-    sample_size = dataset.shape[1]
-    batch_size = dataset.shape[0]
-
-    # leave index 0 as a validation sample
-    data_loader = DataLoader(torch.FloatTensor(dataset[1:]), batch_size=batch_size, shuffle=True)
-
-    enc = MLPEncoder(sample_size, code_size)
-    dec = MLPDecoder(code_size, sample_size)
-    aut = AutoEncoder(enc, dec, data_loader, use_cuda = True)
-
-    for ii in range(num_iters):
-        print(str(ii) + '/' + str(num_iters) + ' ')
-        aut.train(20, batch_size)
-
-    # Try to reconstruct one of the samples
-    recon = aut.reconstruct(Variable(torch.FloatTensor(dataset[100:101]))).data.cpu().numpy()
-    recon = recon.reshape(recon.shape[0], window_size, -1)
-    # Remove unnecessary dimension
-    recon = recon.reshape(window_size, -1)
-    print(recon)
-    print(recon.shape)
-
-    # postprocessing
-
-    # visualizations
-    codes = aut.encode(Variable(torch.FloatTensor(dataset))).data.cpu().numpy()
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-    ax.scatter(codes[:,0],codes[:,1],codes[:,2],c=np.arange(codes.shape[0]))
-    plt.show()
-
-    # print to file
-    mdata = {}
-    mdata['Frames'] = recon.tolist()
-    mdata['Loop'] = False
-    with open(out_path, 'w') as outfile:
-        encoder.FLOAT_REPR = lambda o: format(o, '.6f')
-        json.dump(mdata, outfile)
+    utils.output_motion(recon, out_path)
 

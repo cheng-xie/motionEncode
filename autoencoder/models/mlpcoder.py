@@ -34,6 +34,9 @@ class MLPDecoder(nn.Module):
     def input_size(self):
         return self._d_in
 
+    def output_size(self):
+        return self._d_out
+
 class MLPEncoder(nn.Module):
     def __init__(self, d_in, d_out):
         super(MLPEncoder, self).__init__()
@@ -59,3 +62,5 @@ class MLPEncoder(nn.Module):
     def input_size(self):
         return self._d_in
 
+    def output_size(self):
+        return self._d_out

@@ -90,6 +90,22 @@ def add_dir_motion_windows(mfile_dir, window_size, stride = 1, dataset = None):
             dataset = add_file_motion_windows(mfile, window_size, stride = stride, dataset = dataset)
     return dataset
 
+def output_motion(frames, out_path):
+    """
+        Responsible for writing a TerrainRL motion back to a file.
+        Args:
+            @frames     A 2D numpy array of dimensions (frames, features) in
+                        TerrainRL motion frames format.
+    """
+    # Construct the TerrainRLMotion json dictionary
+    mdata = {}
+    mdata['Frames'] = frames.tolist()
+    mdata['Loop'] = False
+    with open(out_path, 'w') as outfile:
+        # TODO: figure out how to format floats properly
+        # encoder.FLOAT_REPR = lambda f: ("%.2f" % f)
+        json.dump(mdata, outfile)
+
 def file_list_from_dir_list(dirs):
     """
         Generates a list of file paths for the files contained in the list of directories.
@@ -98,3 +114,5 @@ def file_list_from_dir_list(dirs):
     for diri in dirs:
         file_paths += [os.path.join(diri, x) for x in os.listdir(diri)]
     return file_paths
+
+

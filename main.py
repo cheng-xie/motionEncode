@@ -12,7 +12,7 @@ def main(argv):
         load_path = None
     print(argv[0])
     # motion_test.test_multimodal_motion(['data/tests/run_turn','data/tests/walk_turn'], 'output/overfit_out.txt', argv[0], load_path)
-    motion_test.test_multimodal_motion(['data/tests/run_turn','data/tests/walk_turn', 'data/tests/run','data/tests/walk'], 'output/overfit_out.txt', argv[0], load_path)
+    motion_test.simple_test_multimodal_motion(['data/tests/run_turn','data/tests/walk_turn', 'data/tests/run','data/tests/walk'], 'output/overfit_out.txt', argv[0], load_path)
 
 if __name__ == '__main__':
     main(sys.argv[1:])
