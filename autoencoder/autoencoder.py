@@ -87,3 +87,12 @@ class AutoEncoder:
             self.data_iter = iter(self.data)
             return self.data_iter.next()
 
+    def save_state_dict(self, path):
+        param_dict = {'enc': self.enc.state_dict(), 'dec': self.dec.state_dict()}
+        torch.save(param_dict, path)
+
+    def load_state_dict(self, path):
+        param_dict = torch.load(path)
+        self.enc.load_state_dict(param_dict['enc'])
+        self.dec.load_state_dict(param_dict['dec'])
+

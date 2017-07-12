@@ -24,9 +24,9 @@ class MLPDecoder(nn.Module):
 
     def forward(self, input):
         x = self.l1(input)
-        x = F.elu(x)
+        x = F.relu(x)
         x = self.l11(x)
-        x = F.elu(x)
+        x = F.relu(x)
         x = self.l2(x)
         # x = F.tanh(x)
         return x
@@ -49,9 +49,9 @@ class MLPEncoder(nn.Module):
 
     def forward(self, input):
         x = self.l1(input)
-        x = F.elu(x)
+        x = F.relu(x)
         x = self.l11(x)
-        x = F.elu(x)
+        x = F.relu(x)
         x = self.l2(x)
         x = F.tanh(x)
         return x

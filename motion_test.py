@@ -17,48 +17,72 @@ from autoencoder.autoencoder import AutoEncoder
 import util
 from preprocess import TerrainRLMotionPreprocessor as Preprocessor
 
-def test_bimodal_motion(mfile_dir1, mfile_dir2, out_path):
+'''
+class MultimodalMotion:
+    def __init__():
+        pass
+
+    def save_param_dict():
+
+    def load_param_dict()
+
+    def train():
+
+    def recon():
+
+    def visualize():
+'''
+
+def test_multimodal_motion(mfile_dirs, out_path, save_weights_path, load_weights_path = None):
     # Preprocessing
     # TODO: handle different target frame rates
     dataset = None
-    window_size = 40
+    window_size = 30
     stride = 5
     do_preprocess = True
     do_visualize = True
 
     # Load data
     if do_preprocess:
-        file_paths = util.file_list_from_dir_list([mfile_dir1, mfile_dir2])
+        file_paths = util.file_list_from_dir_list(mfile_dirs)
         preprocessor = Preprocessor(t_feature_idx=0, x_feature_idx=1, z_feature_idx=3, window_size=window_size, stride=stride)
         dataset = preprocessor.generate_dataset(file_paths)
     else:
-        dataset = util.add_dir_motion_windows(mfile_dir1, window_size = window_size, stride = stride, dataset = dataset)
-        if dataset is None:
-            print('First dir did not contain proper data.')
-        dataset = util.add_dir_motion_windows(mfile_dir2, window_size = window_size, stride = stride, dataset = dataset)
+        for mfile_dir in mfile_dirs:
+            dataset = util.add_dir_motion_windows(mfile_dir, window_size = window_size, stride = stride, dataset = dataset)
+            if dataset is None:
+                print('Dir did not contain proper data.')
 
     # Flatten features as we are just using a MLP
     dataset = dataset.reshape(dataset.shape[0],-1)
 
 
     # Train
-    num_iters = 550
+    num_iters = 1550
     num_sub_steps = 20
-    code_size = 5
+    code_size = 3
     sample_size = dataset.shape[1]
     # Full batch
     batch_size = dataset.shape[0]
     # Leave index 0 as a validation sample
-    # data_loader = DataLoader(torch.FloatTensor(dataset[1:]), batch_size=batch_size, shuffle=True)
-    data_loader = DataLoader(torch.FloatTensor(dataset), batch_size=batch_size, shuffle=True)
+    data_loader = DataLoader(torch.FloatTensor(dataset[1:]), batch_size=batch_size, shuffle=True)
+    # data_loader = DataLoader(torch.FloatTensor(dataset), batch_size=batch_size, shuffle=True)
 
     enc = MLPEncoder(sample_size, code_size)
     dec = MLPDecoder(code_size, sample_size)
     aut = AutoEncoder(enc, dec, data_loader, use_cuda = True)
 
+    print(save_weights_path)
+    print(load_weights_path)
+    if load_weights_path is not None:
+        aut.load_state_dict(load_weights_path)
+
     for ii in range(num_iters):
         print(str(ii) + '/' + str(num_iters) + ' ')
         aut.train(num_sub_steps, batch_size)
+
+    # Save the model
+    aut.save_state_dict(save_weights_path)
 
 
     # Visualizations
@@ -71,7 +95,7 @@ def test_bimodal_motion(mfile_dir1, mfile_dir2, out_path):
 
 
     # Try to reconstruct one of the samples
-    recon = aut.reconstruct(Variable(torch.FloatTensor(dataset[0:1]))).data.cpu().numpy()
+    recon = aut.reconstruct(Variable(torch.FloatTensor(dataset[100:101]))).data.cpu().numpy()
     recon = recon.reshape(recon.shape[0], window_size, -1)
     # Remove unnecessary dimension
     recon = recon.reshape(window_size, -1)
@@ -120,7 +144,7 @@ def test_overfit_motion(m_file_dir, out_path):
         aut.train(20, batch_size)
 
     # Try to reconstruct one of the samples
-    recon = aut.reconstruct(Variable(torch.FloatTensor(dataset[0:1]))).data.cpu().numpy()
+    recon = aut.reconstruct(Variable(torch.FloatTensor(dataset[100:101]))).data.cpu().numpy()
     recon = recon.reshape(recon.shape[0], window_size, -1)
     # Remove unnecessary dimension
     recon = recon.reshape(window_size, -1)
