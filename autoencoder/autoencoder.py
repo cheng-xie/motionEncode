@@ -92,11 +92,13 @@ class AutoEncoder:
         return self.dec.forward(self.enc.forward(samples))
 
     def encode(self, samples):
+        samples = Variable(torch.FloatTensor(samples))
         if self.use_cuda:
             samples = samples.cuda()
         return self.enc.forward(samples)
 
     def decode(self, codes):
+        codes = Variable(torch.FloatTensor(codes))
         if self.use_cuda:
             codes = codes.cuda()
         return self.dec.forward(codes)

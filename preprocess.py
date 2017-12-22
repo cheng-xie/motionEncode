@@ -45,10 +45,11 @@ def compute_gradients(arr):
 
 
 class TerrainRLMotionPreprocessor:
-    def __init__(self, t_feature_idx, x_feature_idx, z_feature_idx, window_size, stride):
+    def __init__(self, t_feature_idx, x_feature_idx, z_feature_idx, heading_feature_idx window_size, stride):
         self.t_feature_idx = t_feature_idx
         self.x_feature_idx = x_feature_idx
         self.z_feature_idx = z_feature_idx
+        self.heading_feature_idx = heading_feature_idx
         self.window_size = window_size
         self.stride = stride
         # TODO: Implement proper time step sampling with linear interpolation

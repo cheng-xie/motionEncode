@@ -71,7 +71,7 @@ class TerrainRLMotionEncodeScenario:
     def visualize_encoding(self, dataset):
         # Visualizations
         if self._code_dims >= 3:
-            codes = self._model.encode(Variable(torch.FloatTensor(dataset))).data.cpu().numpy()
+            codes = self._model.encode(dataset).data.cpu().numpy()
             fig = plt.figure()
             ax = fig.add_subplot(111, projection='3d')
             ax.scatter(codes[:,0],codes[:,1],codes[:,2],c=np.arange(codes.shape[0]))
@@ -90,14 +90,21 @@ class TerrainRLMotionEncodeScenario:
         dataset = dataset.reshape(dataset.shape[0],-1)
         return dataset
 
+    def decode(self, code, window_size):
+        sample = self._model.decode(code).data.cpu().numpy()
+        sample = sample.reshape(sample.shape[0], window_size, -1)
+        sample = sample.reshape(window_size, -1)
+        return self.preprocessor.convert_back(sample)
+
+
 def simple_test_multimodal_motion(mfile_dirs, out_path, save_weights_path, load_weights_path = None):
     # Params
-    window_size = 30
-    stride = 5
+    window_size = 10
+    stride = 2
     do_visualize = True
 
     use_cuda = True
-    epochs = 10000
+    epochs = 1000
     batch_size = -1     # Full batches
     iters_per_log = 10
 
@@ -131,9 +138,12 @@ def simple_test_multimodal_motion(mfile_dirs, out_path, save_weights_path, load_
 
     # Output Reconstruction
     recon = scenario.reconstruct(dataset[100:101], window_size)
-
     print(recon)
     print(recon.shape)
+    util.output_motion(recon, out_path)
 
-    utils.output_motion(recon, out_path)
+    # Try to interpolate between walking and running
+    # decoding = scenario.decode(np.array([[0.71,-0.00,0.15]]), window_size)
+    # util.output_motion(decoding, out_path)
+
 
